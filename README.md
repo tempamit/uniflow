@@ -83,3 +83,14 @@ npm run worker
 ## KVM-2 note
 
 This uses a lightweight DB outbox pattern with a polling worker, avoiding heavy infrastructure while still enabling async reliable email delivery.
+
+
+## Coolify compose file note
+
+If Coolify is configured to load `/docker-compose.yaml`, this repository now includes that file.
+You can use either:
+
+- `docker-compose.yaml`
+- `docker-compose.yml`
+
+Both files contain the same service definition.
