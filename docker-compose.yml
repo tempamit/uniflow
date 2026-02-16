@@ -1,0 +1,79 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: iflow
+      POSTGRES_USER: iflow
+      POSTGRES_PASSWORD: iflow
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U iflow -d iflow']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.80'
+          memory: 700M
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.20'
+          memory: 180M
+
+  backend:
+    image: node:20-alpine
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "npm install && npm run migrate && npm run dev"
+    env_file:
+      - backend/.env
+    volumes:
+      - ./backend:/app
+    ports:
+      - '4000:4000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 700M
+
+  worker:
+    image: node:20-alpine
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "npm install && npm run migrate && npm run worker"
+    env_file:
+      - backend/.env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          cpus: '0.30'
+          memory: 220M
+
+volumes:
+  postgres_data:
